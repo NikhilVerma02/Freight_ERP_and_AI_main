@@ -1,0 +1,62 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+.venv-eval/
+venv/
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# ── Environment & secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+*.log.*
+
+# ── Runtime data — ERP app ────────────────────────────────────────────────────
+# Flat-file store (live data, not source)
+erp-app/backend/data/*.json
+
+# Uploaded SLA PDF documents
+erp-app/backend/data/sla_documents/
+
+# ChromaDB vector store (rebuilt on SLA upload)
+erp-app/backend/data/vector_cache/
+!erp-app/backend/data/vector_cache/.gitkeep
+
+# RAG evaluation outputs
+erp-app/backend/data/rag_eval_results/
+
+# ── Runtime data — AI app ─────────────────────────────────────────────────────
+# Agent run logs and claim pipeline output
+ai-app/backend/data/*.json
+
+# Per-user chat session files
+ai-app/backend/data/chat_sessions/
+
+# Uploaded evidence files (videos, images, audio)
+ai-app/backend/data/temp_uploads/
+!ai-app/backend/data/temp_uploads/.gitkeep
+
+# Sample videos (large binary files)
+ai-app/backend/data/sample_videos/
+!ai-app/backend/data/sample_videos/.gitkeep
+
+# ── Claude Code session files ─────────────────────────────────────────────────
+.claude/settings.local.json
+*.session.json
+
+# ── OS noise ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

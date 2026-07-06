@@ -1,0 +1,48 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ai-app-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "ai-app/frontend",
+      "port": 5174,
+      "autoPort": false
+    },
+    {
+      "name": "erp-app-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "erp-app/frontend",
+      "port": 5173
+    },
+    {
+      "name": "erp-app-backend",
+      "runtimeExecutable": "../../.venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--port", "8001"],
+      "cwd": "erp-app/backend",
+      "port": 8001
+    },
+    {
+      "name": "ai-app-backend",
+      "runtimeExecutable": "../../.venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--port", "8002"],
+      "cwd": "ai-app/backend",
+      "port": 8002
+    },
+    {
+      "name": "vendor-app-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "vendor-app/frontend",
+      "port": 5175
+    },
+    {
+      "name": "customer-app-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "customer-app/frontend",
+      "port": 5176
+    }
+  ]
+}

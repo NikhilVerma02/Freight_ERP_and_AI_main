@@ -1,0 +1,5 @@
+# Eval-only dependencies for scripts/eval_rag.py — NOT needed to run the app
+# itself, so kept out of requirements.txt to avoid bloating the runtime image.
+ragas
+langchain-openai
+datasets

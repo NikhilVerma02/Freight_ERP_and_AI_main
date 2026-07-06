@@ -1,0 +1,13 @@
+fastapi
+bcrypt
+uvicorn[standard]
+openai
+truststore
+mcp
+python-dotenv
+python-multipart
+pypdf
+chromadb
+numpy
+pydantic
+langfuse

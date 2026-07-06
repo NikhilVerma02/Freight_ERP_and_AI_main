@@ -1,0 +1,46 @@
+{
+  "slas": [
+    {
+      "sla_id": "eval_eligibility",
+      "vendor_username": "eval-vendor",
+      "text": "Claims SLA - Eligibility for Suspected Transit Damage\n\nDamage Assessment Criteria\n\nClaim Eligibility\n\nA shipment is eligible for a damage claim review when:\n\n1. Visible external packaging damage is present, including but not limited to:\n   - Large tears\n   - Crushing or compression\n   - Punctures\n   - Structural deformation of the carton or palletized load\n\n2. The observed packaging damage could reasonably have affected the contents, even if the contents are not directly visible during inspection.\n\n3. The inspection evidence is sufficient to indicate potential transit damage but insufficient to determine the full extent of product damage.\n\nApplicable Evidence\n\nEvidence Notes: The bottom box on the pallet has a large tear and appears crushed.\nConfidence Notes: The extent of the damage to the contents of the box is not visible.\n\nSLA Decision\n\nStatus: Eligible for Claim Review\n\nReason:\nThe shipment exhibits significant external packaging damage (tear and crushing), creating a reasonable possibility of damage to the enclosed goods. Because the contents cannot be visually inspected from the available evidence, the claim should remain eligible and proceed for additional validation rather than being rejected due to lack of visible internal damage.\n\nRequired Next Steps\n\n- Record photographic evidence of the damaged packaging.\n- Request photographs of the contents after opening, if available.\n- Verify shipment handling history and delivery condition.\n- Process the claim according to standard damage assessment procedures once additional evidence is received."
+    },
+    {
+      "sla_id": "eval_liability",
+      "vendor_username": "eval-vendor",
+      "text": "Vendor X - Master Freight Service Level Agreement\n\n1. Scope of Coverage\nThis Service Level Agreement governs all freight shipments tendered by the Customer to Vendor X (Carrier) for line-haul and final-mile transport. Coverage applies to physical damage, shortage, and loss claims arising during the period the freight is in Carrier custody, from origin pickup scan to destination delivery signature.\n\n2. Damage Types Covered\nCarrier accepts liability for: (a) crushing or impact damage to cartons and pallets sustained during transit, loading, or unloading; (b) puncture or tearing of packaging caused by improper handling by Carrier personnel; (c) total loss of shipment or individual cartons not delivered.\n\n3. Exclusions\nCarrier shall NOT be liable for: (a) damage resulting from improper or insufficient packaging by the Customer; (b) water or moisture damage of any kind; (c) damage caused by inherent vice or natural deterioration of the goods; (d) loss or damage caused by force majeure events.\n\n4. Claim Filing Deadlines\nAll claims must be filed in writing within NINE (9) calendar days of delivery. Claims filed after this period are time-barred.\n\n5. Liability Caps\nCarrier's maximum liability for any single shipment is the LESSER of the declared value, $4.50 per pound of damaged or lost freight, or $25,000 per shipment."
+    }
+  ],
+  "questions": [
+    {
+      "sla_id": "eval_eligibility",
+      "question": "Is a shipment with a large tear and visible crushing on the outer box eligible for a damage claim review, even if the contents haven't been inspected yet?",
+      "ground_truth": "Yes — visible external packaging damage like a large tear or crushing makes the shipment eligible for claim review under this SLA, even before the contents are inspected, because the damage creates a reasonable possibility of damage to the enclosed goods."
+    },
+    {
+      "sla_id": "eval_eligibility",
+      "question": "How many criteria must be met for a shipment to be eligible for damage claim review?",
+      "ground_truth": "Three criteria: visible external packaging damage, that damage could reasonably have affected the contents, and the inspection evidence is sufficient to indicate potential transit damage but insufficient to determine the full extent of product damage."
+    },
+    {
+      "sla_id": "eval_liability",
+      "question": "Is the carrier liable for water or moisture damage to a shipment?",
+      "ground_truth": "No — the SLA explicitly excludes water or moisture damage of any kind from the carrier's liability."
+    },
+    {
+      "sla_id": "eval_liability",
+      "question": "What is the deadline for filing a claim, and what happens if it's missed?",
+      "ground_truth": "Claims must be filed in writing within 9 calendar days of delivery; claims filed after that period are time-barred."
+    },
+    {
+      "sla_id": "eval_liability",
+      "question": "What is the maximum amount the carrier is liable for on a single damaged shipment?",
+      "ground_truth": "The lesser of the declared value, $4.50 per pound of damaged or lost freight, or $25,000 per shipment."
+    },
+    {
+      "sla_id": "eval_liability",
+      "question": "Does the carrier cover crushing damage caused during loading or unloading?",
+      "ground_truth": "Yes — the carrier accepts liability for crushing or impact damage to cartons and pallets sustained during transit, loading, or unloading."
+    }
+  ]
+}
