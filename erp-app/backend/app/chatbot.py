@@ -166,8 +166,8 @@ def _gather_context(current_user: dict) -> dict:
         inventory = vendor_inv_svc.list_inventory(vendor_username=username)
     elif role == "customer":
         inventory = customer_inv_svc.list_inventory(customer_username=username)
-    # admin has no single vendor/customer scope for inventory — orders/claims/SLA already
-    # give a full system-wide picture without an unbounded inventory dump.
+    elif role in ("admin", "warehouse", "procurement_officer", "inventory_controller", "finance_officer"):
+        inventory = vendor_inv_svc.list_inventory()
 
     return {
         "role": role,

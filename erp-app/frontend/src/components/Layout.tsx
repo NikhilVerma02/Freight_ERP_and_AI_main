@@ -25,7 +25,6 @@ const NAV_BY_ROLE: Record<string, NavItem[]> = {
     { to: "/purchase-orders", label: "My Orders (POs)", icon: "🧾" },
     { to: "/vendor-inventory", label: "Inventory", icon: "📦" },
     { to: "/vendors", label: "My Vendors", icon: "🏭" },
-    { to: "/customers", label: "My Customers", icon: "🏢" },
     { to: "/sla-upload", label: "Upload SLA", icon: "📄" },
     { to: "/sla", label: "SLA Documents", icon: "📋" },
     { to: "/claims", label: "Claim Requests", icon: "⚠️" },

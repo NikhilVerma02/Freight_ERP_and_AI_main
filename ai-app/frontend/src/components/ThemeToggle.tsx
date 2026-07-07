@@ -65,7 +65,7 @@ export default function ThemeToggle() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-40 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-1 shadow-lg dark:shadow-xl dark:shadow-black/40">
+        <div className="absolute right-0 top-full z-[200] mt-2 w-40 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-1 shadow-xl dark:shadow-black/40">
           {OPTIONS.map(({ value, label, Icon }) => {
             const active = theme === value;
             return (

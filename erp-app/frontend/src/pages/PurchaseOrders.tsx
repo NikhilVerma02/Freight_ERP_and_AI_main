@@ -67,7 +67,7 @@ export default function PurchaseOrders() {
         api.get<User[]>("/api/users"),
       ]);
       setPos(pData);
-      setVendors(uData.filter((u) => u.role === "vendor" || u.role === "vendor_order_manager"));
+      setVendors(uData.filter((u) => u.role === "vendor"));
     } catch (err) {
       show("error", err instanceof ApiError ? err.message : "Failed to load data");
     } finally {

@@ -92,7 +92,7 @@ export function Layout() {
       {/* ── Main area ── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="ai-header flex items-center justify-between px-6 py-2.5">
+        <header className="ai-header relative z-[150] flex items-center justify-between px-6 py-2.5">
           <div />
           <div className="flex items-center gap-2">
             {/* User chip */}

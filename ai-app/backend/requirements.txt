@@ -11,3 +11,9 @@ chromadb
 numpy
 pydantic
 langfuse
+langgraph>=0.2
+langgraph-checkpoint
+langgraph-sdk
+langchain-core
+langsmith
+ormsgpack

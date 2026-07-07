@@ -23,10 +23,14 @@ function fmt(s: string | null | undefined) {
   return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function customerCompany(po: PurchaseOrder) {
+  if ((po as any).created_by === "ai-agent") return APP_NAME;
+  return (po as any).created_by_company || (po as any).customer_name || "—";
+}
+
 function raisedBy(po: PurchaseOrder) {
-  return (po as any).created_by === "ai-agent"
-    ? APP_NAME
-    : (po as any).customer_name || (po as any).created_by || "—";
+  if ((po as any).created_by === "ai-agent") return APP_NAME;
+  return (po as any).created_by_display_name || (po as any).created_by || "—";
 }
 
 export default function PurchaseOrders() {
@@ -106,7 +110,7 @@ export default function PurchaseOrders() {
           <table className="w-full min-w-max divide-y divide-slate-100 dark:divide-slate-800 text-sm">
             <thead className="bg-slate-50 dark:bg-slate-800/60">
               <tr>
-                {["PO Number", "SKU", "Item", "Qty", "Status", "Raised By", "Delivery Date", "Raised", ""].map((h) => (
+                {["PO Number", "SKU", "Item", "Qty", "Status", "Customer", "Raised By", "Delivery Date", "Raised", ""].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">
                     {h}
                   </th>
@@ -116,7 +120,7 @@ export default function PurchaseOrders() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center">
+                  <td colSpan={10} className="px-4 py-12 text-center">
                     <div className="flex items-center justify-center gap-2 text-slate-400 dark:text-slate-500">
                       <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
@@ -128,7 +132,7 @@ export default function PurchaseOrders() {
                 </tr>
               ) : pos.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-sm text-slate-400 dark:text-slate-500">
+                  <td colSpan={10} className="px-4 py-12 text-center text-sm text-slate-400 dark:text-slate-500">
                     No purchase orders yet.
                   </td>
                 </tr>
@@ -150,6 +154,7 @@ export default function PurchaseOrders() {
                     <td className="px-4 py-3">
                       <Badge tone={STATUS_BADGE[po.status] ?? "slate"}>{po.status}</Badge>
                     </td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">{customerCompany(po)}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">{raisedBy(po)}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">{fmt(po.delivery_date)}</td>
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-500 whitespace-nowrap text-xs">{fmt(po.date_raised)}</td>
@@ -192,6 +197,10 @@ export default function PurchaseOrders() {
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Quantity</p>
                 <p className="mt-0.5 font-semibold text-slate-800 dark:text-slate-200">{selected.quantity}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Customer</p>
+                <p className="mt-0.5 text-slate-700 dark:text-slate-300">{customerCompany(selected)}</p>
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Raised By</p>

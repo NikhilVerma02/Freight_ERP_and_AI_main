@@ -1,5 +1,5 @@
-export type ErpRole = "admin" | "procurement_officer" | "inventory_controller" | "finance_officer";
-export type VendorRole = "vendor_order_manager" | "vendor_claim_handler";
+export type ErpRole = "admin" | "warehouse" | "procurement_officer" | "inventory_controller" | "finance_officer";
+export type VendorRole = "vendor" | "vendor_order_manager" | "vendor_claim_handler";
 export type CustomerRole = "customer";
 export type Role = ErpRole | VendorRole | CustomerRole;
 

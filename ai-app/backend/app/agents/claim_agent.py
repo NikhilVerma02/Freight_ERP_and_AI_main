@@ -235,21 +235,5 @@ async def run_claim(mcp_client: ErpMcpClient, case: dict, policy_result: dict | 
     except Exception as exc:
         logger.warning("Failed to send admin claim alert: %s", exc)
 
-    if vendor_username:
-        # Send a single alert to the vendor (order manager account)
-        try:
-            await mcp_client.create_alert(
-                audience="vendor",
-                target_username=vendor_username,
-                type="claim_raised",
-                title="Claim Raised Against Your PO",
-                message=(
-                    f"Freight ERP has raised a claim against PO {claim_order_number} "
-                    f"and SKU {claim_sku}."
-                ),
-                related_id=claim_record.get("id"),
-            )
-        except Exception as exc:
-            logger.warning("Failed to send vendor claim alert to %s: %s", vendor_username, exc)
 
     return {"claim": claim_record, "skipped": False, "skip_reason": None, "raw": raw, "status": "ok", "error": None}

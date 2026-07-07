@@ -46,20 +46,20 @@ export default function CaseHistory() {
                   <Th>{t("history.status")}</Th>
                   <Th>{t("history.claim")}</Th>
                   <Th>{t("history.alert")}</Th>
-                  <Th>{"Â "}</Th>
+                  <Th>{}</Th>
                 </Tr>
               </Thead>
               <motion.tbody variants={staggerContainer} initial="hidden" animate="show">
                 {runs.map((r) => (
-                  <motion.tr key={r.run_id} variants={fadeUpItem} className="border-b border-slate-800/60 last:border-0">
+                  <motion.tr key={r.run_id} variants={fadeUpItem} className="border-b border-slate-200 dark:border-slate-800/60 last:border-0">
                     <Td className="font-mono text-xs">{r.run_id}</Td>
                     <Td className="max-w-xs truncate">{r.case_summary}</Td>
-                    <Td className="text-xs text-slate-400">{new Date(r.started_at).toLocaleString()}</Td>
+                    <Td className="text-xs text-slate-500 dark:text-slate-400">{new Date(r.started_at).toLocaleString()}</Td>
                     <Td>
                       <Badge tone={statusToTone(r.status)}>{r.status}</Badge>
                     </Td>
-                    <Td className="text-xs">{r.claim_id ?? "â€”"}</Td>
-                    <Td className="text-xs">{r.alert_id ?? "â€”"}</Td>
+                    <Td className="text-xs">{r.claim_id ?? "—"}</Td>
+                    <Td className="text-xs">{r.alert_id ?? "—"}</Td>
                     <Td>
                       <Button size="sm" variant="secondary" onClick={() => navigate(`/cases/${r.run_id}`)}>
                         {t("history.view")}

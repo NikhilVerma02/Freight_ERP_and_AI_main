@@ -5,28 +5,49 @@ Inspectors see all records (admin-level); admin sees all too.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+import os
+
+import httpx
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.auth import require_role
-from app.mcp_client import McpClientError, get_erp_mcp_client
 
 router = APIRouter(prefix="/api", tags=["records"])
 
+ERP_BASE_URL = os.environ.get("ERP_BASE_URL", "http://127.0.0.1:8001")
+
 
 @router.get("/claims")
-async def list_claims(current_user: dict = Depends(require_role("admin", "inspector"))):
-    mcp_client = get_erp_mcp_client()
+async def list_claims(
+    current_user: dict = Depends(require_role("admin", "inspector")),
+    authorization: str | None = Header(default=None),
+):
     try:
-        # Both admin and inspector get all claims via MCP (admin-level ERP token)
-        raise HTTPException(status_code=501, detail="Claim listing not yet wired to a single MCP call — use ERP portal")
-    except McpClientError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{ERP_BASE_URL}/api/claims",
+                headers={"Authorization": authorization or ""},
+            )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail=f"ERP unreachable: {exc}")
 
 
 @router.get("/orders")
-async def list_orders(current_user: dict = Depends(require_role("admin", "inspector"))):
-    mcp_client = get_erp_mcp_client()
+async def list_orders(
+    current_user: dict = Depends(require_role("admin", "inspector")),
+    authorization: str | None = Header(default=None),
+):
     try:
-        raise HTTPException(status_code=501, detail="Order listing not yet wired to a single MCP call — use ERP portal")
-    except McpClientError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{ERP_BASE_URL}/api/orders",
+                headers={"Authorization": authorization or ""},
+            )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail=f"ERP unreachable: {exc}")

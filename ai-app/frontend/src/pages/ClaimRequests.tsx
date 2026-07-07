@@ -34,7 +34,7 @@ export default function ClaimRequests() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-500 dark:text-rose-300">
           {error}
         </div>
       )}
@@ -58,18 +58,18 @@ export default function ClaimRequests() {
             <motion.div key={c.id} variants={fadeUpItem}>
               <Card className="flex flex-col gap-2 border-t-2 p-4" style={{ borderTopColor: AGENT_COLORS.claim.hex }}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-sm font-semibold text-slate-100">{c.claim_number}</span>
+                  <span className="font-mono text-sm font-semibold ai-text-primary">{c.claim_number}</span>
                   <Badge tone={statusTone(c.status)}>{c.status}</Badge>
                 </div>
                 <div className="text-xs text-slate-500">
-                  {c.customer_username} â†’ {c.vendor_username}
+                  {c.customer_username} → {c.vendor_username}
                 </div>
-                <p className="text-sm text-slate-300">
-                  {c.damage_type} Â· {c.sku} Â· Ã—{c.damaged_qty}
+                <p className="text-sm ai-text-primary">
+                  {c.damage_type} · {c.sku} · ×{c.damaged_qty}
                 </p>
-                <p className="text-xs text-slate-400">{c.claim_text}</p>
+                <p className="text-xs ai-text-secondary">{c.claim_text}</p>
                 {c.decision_reason && (
-                  <p className="text-xs text-rose-300">{t("detail.justification")}: {c.decision_reason}</p>
+                  <p className="text-xs text-rose-500 dark:text-rose-300">{t("detail.justification")}: {c.decision_reason}</p>
                 )}
                 {c.created_at && (
                   <p className="text-[11px] font-mono text-slate-500">{new Date(c.created_at).toLocaleString()}</p>

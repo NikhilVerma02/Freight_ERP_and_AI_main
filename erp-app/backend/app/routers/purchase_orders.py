@@ -27,14 +27,53 @@ def _next_po_number() -> str:
     return f"PO-{max_n + 1:04d}"
 
 
+def _enrich_pos(pos: list[dict]) -> list[dict]:
+    """Add created_by_company, created_by_display_name, and vendor_company_name to each PO."""
+    from app.services.users import get_user_by_username
+    cache: dict[str, dict] = {}
+
+    def _lookup(username: str) -> dict:
+        if username not in cache:
+            u = get_user_by_username(username, safe=True) or {}
+            cache[username] = {
+                "company": u.get("company_name") or u.get("display_name") or username,
+                "display": u.get("display_name") or username,
+            }
+        return cache[username]
+
+    result = []
+    for po in pos:
+        cb  = po.get("created_by") or ""
+        ven = po.get("vendor_username") or ""
+        result.append({
+            **po,
+            "created_by_company":      _lookup(cb)["company"],
+            "created_by_display_name": _lookup(cb)["display"],
+            "vendor_company_name":     _lookup(ven)["company"],
+        })
+    return result
+
+
 @router.get("")
 def list_purchase_orders(current_user: dict = Depends(get_current_user)):
     role = current_user["role"]
     username = current_user["username"]
     if role in ("vendor_order_manager", "vendor_claim_handler"):
-        return po_svc.list_purchase_orders(vendor_username=username)
+        from app.services.users import get_user_by_username, list_users
+        user_rec = get_user_by_username(username, safe=False) or {}
+        company = user_rec.get("company_name") or ""
+        if company:
+            vendor_usernames = {
+                u["username"] for u in list_users(safe=False)
+                if u.get("company_name") == company
+                   and u.get("role") in ("vendor", "vendor_order_manager", "vendor_claim_handler")
+            }
+        else:
+            vendor_usernames = {username}
+        pos = [po for po in po_svc.list_purchase_orders() if po.get("vendor_username") in vendor_usernames]
+        return _enrich_pos(pos)
     if role in ("admin", "procurement_officer", "inventory_controller", "finance_officer"):
-        return po_svc.list_purchase_orders()
+        return _enrich_pos(po_svc.list_purchase_orders())
     raise HTTPException(403, "Access denied")
 
 
@@ -82,14 +121,30 @@ def deliver_purchase_order(
     body: DeliverRequest = DeliverRequest(),
     current_user: dict = Depends(get_current_user),
 ):
-    """Mark a PO as Delivered (vendor action)."""
-    if current_user["role"] not in ("vendor_order_manager", "vendor_claim_handler"):
-        raise HTTPException(403, "Vendor portal access only")
+    """Mark a PO as Delivered (vendor or admin action)."""
+    role = current_user["role"]
+    username = current_user["username"]
+    allowed_roles = ("vendor", "vendor_order_manager", "vendor_claim_handler", "admin", "warehouse")
+    if role not in allowed_roles:
+        raise HTTPException(403, "Access denied")
     po = po_svc.get_purchase_order(po_id)
     if not po:
         raise HTTPException(404, "PO not found")
-    if po["vendor_username"] != current_user["username"]:
-        raise HTTPException(403, "Forbidden — this PO does not belong to you")
+    # Non-admin vendor users may only deliver their own company's POs
+    if role in ("vendor", "vendor_order_manager", "vendor_claim_handler"):
+        from app.services.users import get_user_by_username, list_users
+        user_rec = get_user_by_username(username, safe=False) or {}
+        company = user_rec.get("company_name") or ""
+        if company:
+            vendor_usernames = {
+                u["username"] for u in list_users(safe=False)
+                if u.get("company_name") == company
+                   and u.get("role") in ("vendor", "vendor_order_manager", "vendor_claim_handler")
+            }
+        else:
+            vendor_usernames = {username}
+        if po["vendor_username"] not in vendor_usernames:
+            raise HTTPException(403, "Forbidden — this PO does not belong to your company")
     if po["status"] == "Delivered":
         raise HTTPException(400, "PO is already delivered")
     patch: dict = {"status": "Delivered"}

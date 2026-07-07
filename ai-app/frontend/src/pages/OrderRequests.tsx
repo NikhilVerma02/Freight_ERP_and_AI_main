@@ -36,7 +36,7 @@ export default function OrderRequests() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-500 dark:text-rose-300">
           {error}
         </div>
       )}
@@ -60,13 +60,13 @@ export default function OrderRequests() {
             <motion.div key={o.id} variants={fadeUpItem}>
               <Card className="flex flex-col gap-2 border-t-2 p-4" style={{ borderTopColor: AGENT_COLORS.reorder.hex }}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-sm font-semibold text-slate-100">{o.order_number}</span>
+                  <span className="font-mono text-sm font-semibold ai-text-primary">{o.order_number}</span>
                   <Badge tone={statusTone(o.status)}>{o.status}</Badge>
                 </div>
                 <div className="text-xs text-slate-500">
                   {o.customer_username} â†’ {o.vendor_username}
                 </div>
-                <ul className="space-y-1 text-sm text-slate-300">
+                <ul className="space-y-1 text-sm ai-text-primary">
                   {o.items.map((it, i) => (
                     <li key={i} className="flex justify-between">
                       <span>
@@ -77,7 +77,7 @@ export default function OrderRequests() {
                   ))}
                 </ul>
                 {o.undelivered_reason && (
-                  <p className="text-xs text-rose-300">{t("detail.error")}: {o.undelivered_reason}</p>
+                  <p className="text-xs text-rose-500 dark:text-rose-300">{t("detail.error")}: {o.undelivered_reason}</p>
                 )}
                 {(o.requested_at || o.created_at) && (
                   <p className="text-[11px] font-mono text-slate-500">

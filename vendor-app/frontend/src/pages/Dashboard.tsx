@@ -4,7 +4,7 @@ import { useAuth } from "../lib/auth";
 import { useToast } from "../lib/toast";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
-import type { PurchaseOrder, Claim, Alert } from "../lib/types";
+import type { PurchaseOrder, Claim } from "../lib/types";
 
 const STATUS_BADGE: Record<string, "blue" | "yellow" | "green" | "red" | "slate"> = {
   Pending: "yellow",
@@ -50,7 +50,7 @@ export default function Dashboard() {
   const { show } = useToast();
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -59,11 +59,11 @@ export default function Dashboard() {
         const [p, c, a] = await Promise.all([
           api.get<PurchaseOrder[]>("/api/purchase-orders"),
           api.get<Claim[]>("/api/claims"),
-          api.get<Alert[]>("/api/alerts"),
+          api.get<{ status: string }[]>("/api/alerts"),
         ]);
         setPos(p);
         setClaims(c);
-        setAlerts(a);
+        setUnreadAlerts(a.filter((x) => x.status === "unread").length);
       } catch (err) {
         show("error", err instanceof ApiError ? err.message : "Failed to load dashboard");
       } finally {
@@ -71,15 +71,13 @@ export default function Dashboard() {
       }
     })();
   }, [show]);
-
-  const unreadAlerts = alerts.filter((a) => a.status === "unread").length;
   const pendingPos = pos.filter((p) => p.status === "Pending").length;
-  const dispatchedPos = pos.filter((p) => p.status === "Dispatched").length;
+  const dispatchedPos = pos.filter((p) => p.status === "Delivered").length;
   const pendingClaims = claims.filter((c) => c.status === "pending").length;
 
   const stats = [
     { label: "Pending POs",    value: pendingPos    },
-    { label: "Dispatched POs", value: dispatchedPos },
+    { label: "Delivered POs", value: dispatchedPos },
     { label: "Open Claims",    value: pendingClaims },
     { label: "Unread Alerts",  value: unreadAlerts  },
   ];
@@ -153,30 +151,36 @@ export default function Dashboard() {
           )}
         </Card>
 
-        {/* Recent Alerts */}
+        {/* Recent Claims */}
         <Card className="p-0 overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Recent Alerts</h2>
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Recent Claim Requests</h2>
           </div>
-          {alerts.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-slate-400 dark:text-slate-500">No alerts.</p>
+          {claims.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-slate-400 dark:text-slate-500">No claims yet.</p>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {alerts.slice(0, 5).map((a) => (
-                <div
-                  key={a.id}
-                  className={`px-4 py-3 flex items-start gap-3 ${
-                    a.status === "unread" ? "border-l-2 border-l-accent" : ""
-                  }`}
-                >
-                  <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${a.status === "unread" ? "bg-accent" : "bg-slate-300 dark:bg-slate-600"}`} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-snug">{a.title}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{a.message}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <table className="w-full text-sm divide-y divide-slate-100 dark:divide-slate-800">
+              <thead className="bg-slate-50 dark:bg-slate-800/60">
+                <tr>
+                  {["Claim #", "SKU", "Damage", "Qty", "Status"].map((h) => (
+                    <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                {claims.slice(0, 5).map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">{c.claim_number}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-slate-500 dark:text-slate-400">{c.sku}</td>
+                    <td className="px-4 py-2.5 text-xs text-slate-600 dark:text-slate-400 capitalize">{c.damage_type}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-600 dark:text-slate-400">{c.damaged_qty}</td>
+                    <td className="px-4 py-2.5"><Badge tone={STATUS_BADGE[c.status] ?? "slate"}>{c.status}</Badge></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </Card>
 

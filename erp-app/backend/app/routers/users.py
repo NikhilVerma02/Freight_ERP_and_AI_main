@@ -10,7 +10,7 @@ from app.services import users as svc
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 ADMIN_ONLY = ("admin",)
-ALL_ROLES = {"admin", "procurement_officer", "inventory_controller", "finance_officer", "vendor_order_manager", "vendor_claim_handler", "customer", "inspector"}
+ALL_ROLES = {"admin", "warehouse", "vendor", "customer", "procurement_officer", "inventory_controller", "finance_officer", "vendor_order_manager", "vendor_claim_handler", "inspector"}
 
 
 class UserCreate(BaseModel):

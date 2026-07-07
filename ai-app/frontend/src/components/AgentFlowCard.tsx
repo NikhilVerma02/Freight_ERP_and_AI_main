@@ -64,7 +64,7 @@ export function AgentFlowCard({ agentKey, icon, title, subtitle, status, facts, 
       </div>
 
       <Card
-        className={`mb-5 flex-1 border-t-2 ${isPending ? "opacity-50" : "opacity-100"} transition-opacity duration-300`}
+        className={`mb-5 flex-1 min-w-0 overflow-hidden border-t-2 ${isPending ? "opacity-50" : "opacity-100"} transition-opacity duration-300`}
         style={{ borderTopColor: isPending ? undefined : palette.hex }}
       >
         <div className="flex items-center justify-between ai-card-header px-4 py-3">
@@ -91,11 +91,18 @@ export function AgentFlowCard({ agentKey, icon, title, subtitle, status, facts, 
           ) : facts.length === 0 ? (
             <p className="text-sm ai-text-muted">{emptyMessage}</p>
           ) : (
-            <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+            <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
               {facts.map((f, i) => (
-                <div key={i} className={facts.length === 1 || i === facts.length - 1 ? "sm:col-span-2" : ""}>
+                <div
+                  key={i}
+                  className={
+                    f.colSpan === 4 ? "col-span-2 sm:col-span-4" :
+                    f.colSpan === 2 ? "col-span-2" :
+                    facts.length === 1 ? "col-span-2 sm:col-span-4" : ""
+                  }
+                >
                   <dt className="text-xs font-medium uppercase tracking-wide ai-text-muted">{f.label}</dt>
-                  <dd className="mt-0.5 ai-text-primary">{f.value}</dd>
+                  <dd className="mt-0.5 ai-text-primary break-words overflow-wrap-anywhere">{f.value}</dd>
                 </div>
               ))}
             </dl>

@@ -1,7 +1,23 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../lib/auth";
+import { api } from "../lib/api";
 import ThemeToggle from "./ThemeToggle";
+
+function useUnreadAlerts() {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    const ALLOWED = new Set(["reorder", "claim_raised", "new_claim", "inventory"]);
+    const load = () =>
+      api.get<{ is_read: boolean; type: string }[]>("/api/alerts")
+        .then((data) => setCount(data.filter((a) => !a.is_read && ALLOWED.has(a.type)).length))
+        .catch(() => {});
+    load();
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, []);
+  return count;
+}
 
 interface NavItem { to: string; label: string; icon: string; }
 
@@ -41,6 +57,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const unreadCount = useUnreadAlerts();
   const navItems = user ? (NAV_BY_ROLE[user.role] ?? []) : [];
 
   return (
@@ -71,6 +88,11 @@ export default function Layout() {
             >
               <span className="text-base">{item.icon}</span>
               <span className="flex-1">{item.label}</span>
+              {item.to === "/alerts" && unreadCount > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-bold text-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

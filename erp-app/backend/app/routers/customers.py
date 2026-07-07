@@ -20,9 +20,16 @@ def my_vendors(customer_username: str, current_user: dict = Depends(get_current_
     if current_user["role"] not in ("customer", "admin", "warehouse"):
         raise HTTPException(status_code=403, detail="Not permitted")
 
-    vendor_usernames = links_svc.vendors_for_customer(customer_username)
     all_orders = orders_svc.list_orders()
     all_claims = claims_svc.list_claims()
+
+    if current_user["role"] in ("admin", "warehouse"):
+        vendor_usernames = [
+            u["username"] for u in users_svc.list_users(safe=True)
+            if u.get("role") == "vendor"
+        ]
+    else:
+        vendor_usernames = links_svc.vendors_for_customer(customer_username)
 
     results = []
     for username in vendor_usernames:

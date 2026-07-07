@@ -52,6 +52,15 @@ def list_slas_for(current_user: dict) -> list[dict]:
     if role in ("admin", "procurement_officer", "inventory_controller", "finance_officer"):
         return _enrich_with_company_name(list_slas())
     if role in ("vendor_order_manager", "vendor_claim_handler"):
+        from app.services import users as users_svc
+        user_rec = users_svc.get_user_by_username(username, safe=False) or {}
+        company = user_rec.get("company_name") or ""
+        if company:
+            vendor_usernames = {
+                u["username"] for u in users_svc.list_users(safe=False)
+                if u.get("role") == "vendor" and (u.get("company_name") or "") == company
+            }
+            return _enrich_with_company_name([s for s in list_slas() if s.get("vendor_username") in vendor_usernames])
         return _enrich_with_company_name(list_slas_for_vendor(username))
     if role == "customer":
         linked_vendors = set(links_svc.vendors_for_customer(username))
@@ -65,6 +74,15 @@ def can_access_sla(sla: dict, current_user: dict) -> bool:
     if role in ("admin", "procurement_officer", "inventory_controller", "finance_officer"):
         return True
     if role in ("vendor_order_manager", "vendor_claim_handler"):
+        from app.services import users as users_svc
+        user_rec = users_svc.get_user_by_username(username, safe=False) or {}
+        company = user_rec.get("company_name") or ""
+        if company:
+            vendor_usernames = {
+                u["username"] for u in users_svc.list_users(safe=False)
+                if u.get("role") == "vendor" and (u.get("company_name") or "") == company
+            }
+            return sla.get("vendor_username") in vendor_usernames
         return sla.get("vendor_username") == username
     if role == "customer":
         return links_svc.is_linked(username, sla.get("vendor_username"))

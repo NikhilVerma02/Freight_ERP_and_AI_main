@@ -12,6 +12,10 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
 from app.services.users import PASSWORD_POLICY_DESCRIPTION, create_user, get_user_by_username, verify_password
+from app.seed import ensure_vertextech_user as _ensure_system_accounts
+
+# Ensure critical system accounts exist on every startup (survives --reload)
+_ensure_system_accounts()
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 

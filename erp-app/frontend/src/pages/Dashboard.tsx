@@ -160,6 +160,52 @@ function TrendChip({ pct, dark = false }: { pct: number | null; dark?: boolean }
 }
 
 /** First KPI card in the row — permanently dark surface, matching the "hero" tile look. */
+const GRADIENT_PALETTES = [
+  { gradient: "from-blue-500 to-blue-700",       shadow: "shadow-blue-500/40"   },
+  { gradient: "from-emerald-400 to-teal-600",    shadow: "shadow-emerald-500/40" },
+  { gradient: "from-amber-400 to-orange-500",    shadow: "shadow-amber-400/40"  },
+  { gradient: "from-pink-500 to-rose-600",       shadow: "shadow-pink-500/40"   },
+];
+
+function GradientKpiCard({
+  label, value, icon, pct, sublabel, subvalue, paletteIndex = 0,
+}: {
+  label: string; value: React.ReactNode; icon: string; pct: number | null;
+  sublabel?: string; subvalue?: React.ReactNode; paletteIndex?: number;
+}) {
+  const p = GRADIENT_PALETTES[paletteIndex % GRADIENT_PALETTES.length];
+  return (
+    <motion.div variants={fadeUpItem}>
+      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${p.gradient} p-5 text-white shadow-lg ${p.shadow} transition-transform duration-200 hover:-translate-y-1`}>
+        {/* decorative circle */}
+        <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10" />
+        <div className="absolute -bottom-6 -right-2 h-16 w-16 rounded-full bg-white/10" />
+
+        <div className="relative flex items-start justify-between">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 text-2xl backdrop-blur-sm">
+            {icon}
+          </div>
+        </div>
+
+        <p className="relative mt-4 text-4xl font-extrabold tracking-tight">{value}</p>
+        <p className="relative mt-1 text-sm font-semibold uppercase tracking-wider text-white/80">{label}</p>
+
+        {(sublabel || subvalue) && (
+          <div className="relative mt-3 flex items-center justify-between border-t border-white/20 pt-3">
+            <span className="text-xs text-white/70">{sublabel}</span>
+            <span className="text-xs font-bold">{subvalue}</span>
+          </div>
+        )}
+        {!sublabel && (
+          <div className="relative mt-3 border-t border-white/20 pt-3">
+            <TrendChip pct={pct} dark />
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 function HeroKpiCard({ label, value, icon, kind, pct }: { label: string; value: React.ReactNode; icon: string; kind: EntityKind; pct: number | null }) {
   const palette = ENTITY_COLORS[kind];
   return (
@@ -355,8 +401,8 @@ function MiniTrendCard({
   hex: string;
 }) {
   return (
-    <motion.div variants={fadeUpItem}>
-      <Card className="p-4">
+    <motion.div variants={fadeUpItem} className="h-full">
+      <Card className="p-4 h-full flex flex-col">
         <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</h3>
         <div className="mb-3 flex divide-x divide-slate-200 text-center dark:divide-navy-700">
           <div className="flex-1">
@@ -372,7 +418,7 @@ function MiniTrendCard({
             <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{today}</p>
           </div>
         </div>
-        <div className="h-28">
+        <div className="flex-1 min-h-28">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={sparkline}>
               <XAxis dataKey="name" hide />
@@ -399,8 +445,8 @@ function GroupedBarCard({
   seriesB: { key: string; label: string; hex: string };
 }) {
   return (
-    <motion.div variants={fadeUpItem}>
-      <Card className="p-4">
+    <motion.div variants={fadeUpItem} className="h-full">
+      <Card className="p-4 h-full flex flex-col">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</h3>
           <div className="flex items-center gap-3">
@@ -408,7 +454,7 @@ function GroupedBarCard({
             <ChartLegendDot hex={seriesB.hex} label={seriesB.label} />
           </div>
         </div>
-        <div className="h-64">
+        <div className="flex-1 min-h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.15} vertical={false} />
@@ -490,8 +536,9 @@ function AdminDashboard() {
     })();
   }, [show]);
 
+  const ERP_OFFICER_ROLES = new Set(["admin", "warehouse", "procurement_officer", "inventory_controller", "finance_officer"]);
   const vendors = users.filter((u) => u.role === "vendor" || u.role === "vendor_order_manager");
-  const customers = users.filter((u) => u.role === "customer");
+  const officers = users.filter((u) => ERP_OFFICER_ROLES.has(u.role));
   const orderDates = orders.map((o) => o.requested_at || o.created_at);
   const claimDates = claims.map((c) => c.created_at);
   const orderTrend = weekTrend(orderDates);
@@ -513,13 +560,13 @@ function AdminDashboard() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Admin Dashboard" subtitle="Platform-wide overview." />
+      <PageHeader title="Dashboard" subtitle="Platform-wide overview." />
 
       <KpiRow>
-        <HeroKpiCard label="Total Orders" value={orders.length} icon="🧾" kind="orders" pct={orderTrend.pct} />
-        <TintKpiCard label="Total Claims" value={claims.length} icon="📋" kind="claims" pct={claimTrend.pct} />
-        <TintKpiCard label="Vendors" value={vendors.length} icon="🏭" kind="vendors" pct={null} />
-        <TintKpiCard label="Customers" value={customers.length} icon="🏢" kind="customers" pct={null} />
+        <GradientKpiCard label="Total Orders" value={orders.length} icon="🧾" pct={orderTrend.pct} sublabel="vs last week" subvalue={<TrendChip pct={orderTrend.pct} dark />} paletteIndex={0} />
+        <GradientKpiCard label="Total Claims" value={claims.length} icon="📋" pct={claimTrend.pct} sublabel="vs last week" subvalue={<TrendChip pct={claimTrend.pct} dark />} paletteIndex={1} />
+        <GradientKpiCard label="Vendors" value={vendors.length} icon="🏭" pct={null} sublabel="Active vendors" subvalue={vendors.length} paletteIndex={2} />
+        <GradientKpiCard label="ERP Users" value={officers.length} icon="👤" pct={null} sublabel="Internal officers" subvalue={officers.length} paletteIndex={3} />
       </KpiRow>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -534,21 +581,25 @@ function AdminDashboard() {
         <DonutCompletionCard title="Order Status Breakdown" data={orderStatusData} centerLabel={`${deliveredPct}%`} centerSublabel="Delivered" />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <MiniTrendCard
-          title="Claims"
-          total={claimTotal}
-          thisMonth={claimThisMonth}
-          today={claimToday}
-          sparkline={dailySeries(claimDates)}
-          hex={ENTITY_COLORS.claims.hex}
-        />
-        <GroupedBarCard
-          title="New Vendors vs Customers by Month"
-          data={monthlySeries(vendors.map((v) => v.created_at), customers.map((c) => c.created_at), "vendors", "customers")}
-          seriesA={{ key: "vendors", label: "Vendors", hex: ENTITY_COLORS.vendors.hex }}
-          seriesB={{ key: "customers", label: "Customers", hex: ENTITY_COLORS.customers.hex }}
-        />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 items-stretch">
+        <div className="flex flex-col">
+          <MiniTrendCard
+            title="Claims"
+            total={claimTotal}
+            thisMonth={claimThisMonth}
+            today={claimToday}
+            sparkline={dailySeries(claimDates)}
+            hex={ENTITY_COLORS.claims.hex}
+          />
+        </div>
+        <div className="flex flex-col">
+          <GroupedBarCard
+            title="New Vendors vs ERP Users by Month"
+            data={monthlySeries(vendors.map((v) => v.created_at), officers.map((o) => o.created_at), "vendors", "users")}
+            seriesA={{ key: "vendors", label: "Vendors", hex: ENTITY_COLORS.vendors.hex }}
+            seriesB={{ key: "users", label: "ERP Users", hex: ENTITY_COLORS.customers.hex }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -569,10 +620,10 @@ function InventoryDashboard() {
     <div className="flex flex-col gap-5">
       <PageHeader title="Inventory Dashboard" subtitle="Monitor stock levels and reorder points." />
       <KpiRow>
-        <HeroKpiCard label="Total SKUs" value={inv.length} icon="📦" kind="inventory" pct={null} />
-        <TintKpiCard label="Low Stock" value={low.length} icon="⚠️" kind="alerts" pct={null} urgent={low.length > 0} />
-        <TintKpiCard label="Critical Items" value={critical.length} icon="🔴" kind="claims" pct={null} />
-        <TintKpiCard label="Vendors" value={new Set(inv.map((i) => i.vendor_username)).size} icon="🏭" kind="vendors" pct={null} />
+        <GradientKpiCard label="Total SKUs" value={inv.length} icon="📦" pct={null} sublabel="Tracked items" subvalue={inv.length} paletteIndex={0} />
+        <GradientKpiCard label="Low Stock" value={low.length} icon="⚠️" pct={null} sublabel="Below threshold" subvalue={low.length} paletteIndex={3} />
+        <GradientKpiCard label="Critical Items" value={critical.length} icon="🔴" pct={null} sublabel="Manufacturing critical" subvalue={critical.length} paletteIndex={2} />
+        <GradientKpiCard label="Vendors" value={new Set(inv.map((i) => i.vendor_username)).size} icon="🏭" pct={null} sublabel="Active vendors" subvalue={new Set(inv.map((i) => i.vendor_username)).size} paletteIndex={1} />
       </KpiRow>
       <Card className="p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Low Stock Items</h3>
@@ -621,10 +672,10 @@ function FinanceDashboard() {
     <div className="flex flex-col gap-5">
       <PageHeader title="Finance Dashboard" subtitle="Claims management and SLA compliance overview." />
       <KpiRow>
-        <HeroKpiCard label="Total Claims" value={claims.length} icon="📋" kind="claims" pct={claimTrend.pct} />
-        <TintKpiCard label="Pending" value={pending.length} icon="⏳" kind="orders" pct={null} urgent={pending.length > 0} />
-        <TintKpiCard label="Approved" value={approved.length} icon="✅" kind="vendors" pct={null} />
-        <TintKpiCard label="Rejected" value={rejected.length} icon="❌" kind="alerts" pct={null} />
+        <GradientKpiCard label="Total Claims" value={claims.length} icon="📋" pct={claimTrend.pct} sublabel="vs last week" subvalue={<TrendChip pct={claimTrend.pct} dark />} paletteIndex={0} />
+        <GradientKpiCard label="Pending" value={pending.length} icon="⏳" pct={null} sublabel="Awaiting decision" subvalue={pending.length} paletteIndex={2} />
+        <GradientKpiCard label="Approved" value={approved.length} icon="✅" pct={null} sublabel="Claims approved" subvalue={approved.length} paletteIndex={1} />
+        <GradientKpiCard label="Rejected" value={rejected.length} icon="❌" pct={null} sublabel="Claims rejected" subvalue={rejected.length} paletteIndex={3} />
       </KpiRow>
       <DonutCompletionCard
         title="Claims Status Breakdown"

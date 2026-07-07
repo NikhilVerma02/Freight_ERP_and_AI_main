@@ -18,6 +18,7 @@ class ClaimCreate(BaseModel):
     damage_type: str
     damaged_qty: int
     claim_text: str
+    claim_value: float | None = None
 
 
 class ClaimDecision(BaseModel):
@@ -57,10 +58,10 @@ def get_claim(claim_id: int, current_user: dict = Depends(get_current_user)):
 
 
 @router.post("")
-def create_claim(payload: ClaimCreate, current_user: dict = Depends(require_role("customer", "finance_officer"))):
+def create_claim(payload: ClaimCreate, current_user: dict = Depends(require_role("customer", "finance_officer", "admin", "warehouse"))):
     role = current_user["role"]
     try:
-        if role == "finance_officer" and payload.po_id is not None:
+        if role in ("finance_officer", "admin", "warehouse") and payload.po_id is not None:
             # Finance officer files against a purchase order
             po = po_svc.get_purchase_order(payload.po_id)
             if not po:
@@ -73,6 +74,7 @@ def create_claim(payload: ClaimCreate, current_user: dict = Depends(require_role
                 damaged_qty=payload.damaged_qty,
                 claim_text=payload.claim_text,
                 actor=current_user["username"],
+                claim_value=payload.claim_value,
             )
         # Customer files against their own delivered order
         if not payload.order_id:
@@ -85,6 +87,7 @@ def create_claim(payload: ClaimCreate, current_user: dict = Depends(require_role
             damaged_qty=payload.damaged_qty,
             claim_text=payload.claim_text,
             actor=current_user["username"],
+            claim_value=payload.claim_value,
         )
     except HTTPException:
         raise
@@ -97,7 +100,7 @@ def create_claim(payload: ClaimCreate, current_user: dict = Depends(require_role
 
 
 @router.put("/{claim_id}/decision")
-def decide_claim(claim_id: int, payload: ClaimDecision, current_user: dict = Depends(require_role("vendor_claim_handler"))):
+def decide_claim(claim_id: int, payload: ClaimDecision, current_user: dict = Depends(require_role("vendor_claim_handler", "admin", "warehouse"))):
     if payload.status not in ("approved", "rejected"):
         raise HTTPException(status_code=400, detail="status must be 'approved' or 'rejected'")
     try:
@@ -107,6 +110,7 @@ def decide_claim(claim_id: int, payload: ClaimDecision, current_user: dict = Dep
             status=payload.status,
             decision_reason=payload.decision_reason,
             actor=current_user["username"],
+            bypass_vendor_check=current_user["role"] in ("admin", "warehouse"),
         )
     except ValueError as e:
         if str(e) == "forbidden":

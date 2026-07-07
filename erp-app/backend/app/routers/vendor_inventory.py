@@ -8,17 +8,19 @@ from app.services import vendor_inventory as svc
 
 router = APIRouter(prefix="/api/vendor_inventory", tags=["vendor_inventory"])
 
-READ_ROLES = ("admin", "warehouse", "inventory_controller")
-WRITE_ROLES = ("admin", "vendor", "warehouse", "inventory_controller")
+READ_ROLES  = ("admin", "warehouse")
+WRITE_ROLES = ("admin", "vendor", "warehouse")
+ERP_ROLES   = ("admin", "warehouse")   # only ERP operators may set daily_production_requirement
 
 
 class VendorInventoryItem(BaseModel):
-    vendor_username: str | None = None  # admin may set explicitly; vendor defaults to self
+    vendor_username: str | None = None  # admin/warehouse set explicitly; vendor defaults to self
     sku: str
     item_name: str
     qty_on_hand: int
     reorder_threshold: int
     manufacturing_critical: bool = False
+    daily_production_requirement: int = 0  # set by ERP admin/warehouse only
 
 
 class VendorInventoryPatch(BaseModel):
@@ -27,6 +29,7 @@ class VendorInventoryPatch(BaseModel):
     qty_on_hand: int | None = None
     reorder_threshold: int | None = None
     manufacturing_critical: bool | None = None
+    daily_production_requirement: int | None = None  # ERP admin/warehouse only
 
 
 @router.get("")
@@ -46,6 +49,8 @@ def get_item(item_id: int, current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Item not found")
     if current_user["role"] == "vendor" and item.get("vendor_username") != current_user["username"]:
         raise HTTPException(status_code=404, detail="Item not found")
+    if current_user["role"] not in (*READ_ROLES, "vendor"):
+        raise HTTPException(status_code=403, detail="Not permitted")
     return item
 
 
@@ -54,6 +59,8 @@ def create_item(payload: VendorInventoryItem, current_user: dict = Depends(requi
     data = payload.model_dump()
     if current_user["role"] == "vendor":
         data["vendor_username"] = current_user["username"]
+        # vendors cannot set the production requirement — clear it
+        data["daily_production_requirement"] = 0
     elif not data.get("vendor_username"):
         raise HTTPException(status_code=400, detail="vendor_username required for admin-created items")
     return svc.create_item(data, actor=current_user["username"])
@@ -66,9 +73,17 @@ def update_item(item_id: int, payload: VendorInventoryPatch, current_user: dict 
         raise HTTPException(status_code=404, detail="Item not found")
     if current_user["role"] == "vendor" and item.get("vendor_username") != current_user["username"]:
         raise HTTPException(status_code=403, detail="Item does not belong to you")
+
     patch = {k: v for k, v in payload.model_dump().items() if v is not None}
-    record = svc.update_item(item_id, patch, actor=current_user["username"])
-    return record
+
+    # vendors cannot touch daily_production_requirement — silently strip it
+    if current_user["role"] == "vendor":
+        patch.pop("daily_production_requirement", None)
+
+    if not patch:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    return svc.update_item(item_id, patch, actor=current_user["username"])
 
 
 @router.delete("/{item_id}")

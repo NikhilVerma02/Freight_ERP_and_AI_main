@@ -35,7 +35,7 @@ export default function SlaUpload() {
           api.get<User[]>("/api/users"),
         ]);
         setSlas(slaList);
-        setVendors(userList.filter((u) => u.role === "vendor_order_manager" || u.role === "vendor"));
+        setVendors(userList.filter((u) => u.role === "vendor"));
       } else {
         const [slaList, customerList] = await Promise.all([
           api.get<VendorSla[]>("/api/vendors/sla"),

@@ -81,7 +81,7 @@ export default function Users({ filterRole, title }: UsersProps) {
         api.get<User[]>("/api/users"),
         api.get<CustomerVendorLink[]>("/api/links"),
       ]);
-      const ERP_ROLES = new Set(["admin", "warehouse", "vendor", "procurement_officer", "inventory_controller", "finance_officer"]);
+      const ERP_ROLES = new Set(["admin", "warehouse", "procurement_officer", "inventory_controller", "finance_officer"]);
       setUsers(u.filter((x) => ERP_ROLES.has(x.role)));
       setLinks(l);
     } catch (err) {

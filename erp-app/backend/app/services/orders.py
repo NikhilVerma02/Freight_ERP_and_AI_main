@@ -22,7 +22,19 @@ def list_orders_for(current_user: dict) -> list[dict]:
     if role == "customer":
         return [o for o in all_orders if o.get("customer_username") == username]
     if role in ("vendor_order_manager", "vendor_claim_handler"):
-        return [o for o in all_orders if o.get("vendor_username") == username]
+        from app.services.users import get_user_by_username, list_users
+        user_rec = get_user_by_username(username, safe=False) or {}
+        company = user_rec.get("company_name") or ""
+        if company:
+            # Collect vendor_usernames of all vendor accounts sharing the same company
+            vendor_usernames = {
+                u["username"] for u in list_users(safe=False)
+                if u.get("company_name") == company
+                   and u.get("role") in ("vendor", "vendor_order_manager", "vendor_claim_handler")
+            }
+        else:
+            vendor_usernames = {username}
+        return [o for o in all_orders if o.get("vendor_username") in vendor_usernames]
     return []
 
 

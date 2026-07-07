@@ -132,7 +132,7 @@ async def list_vendor_options(
             "company_name": u.get("company_name") or None,
         }
         for u in users
-        if u.get("role") in ("vendor", "vendor_order_manager")
+        if u.get("role") == "vendor"
     ]
 
 

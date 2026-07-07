@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.store import Collection, now_iso
+from app.store import Collection
 from app.services.audit_logs import log_action
 
 _col = Collection("customer_inventory.json")

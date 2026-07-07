@@ -158,7 +158,7 @@ Key tables:
 | `users` | All user accounts |
 | `orders` | All orders |
 | `claims` | All freight claims |
-| `vendor_inventory` | Vendor stock items |
+| `vendor_inventory` | Vendor stock items — includes `daily_production_requirement` (units/day consumed by the factory) |
 | `customer_inventory` | Customer received stock |
 | `vendor_sla` | Uploaded SLA documents (metadata) |
 | `customer_vendor_links` | Which customers are linked to which vendors |
@@ -166,7 +166,15 @@ Key tables:
 
 The Supabase client is instantiated per-request via `create_client(SUPABASE_URL, SUPABASE_KEY)` in each router. No restart needed for schema/data changes made directly in Supabase.
 
-Default admin account: `admin / Admin@123`
+**Demo accounts (computer manufacturing context):**
+
+| Username | Password | Role | Description |
+|----------|----------|------|-------------|
+| `admin` | `Admin@123` | admin | Platform admin |
+| `warehouse_op` | `Vendor@123` | warehouse | NovaTech factory floor operator |
+| `compufact` | `Customer@123` | customer | NovaTech Computers — PC manufacturing plant |
+| `procchip` | `Vendor@123` | vendor | ProChip Electronics — CPUs, GPUs, RAM, Motherboards |
+| `powercage` | `Vendor@123` | vendor | PowerCage Systems — PSUs, Cases, SSDs, Coolers |
 
 ---
 

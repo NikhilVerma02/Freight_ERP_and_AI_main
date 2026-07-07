@@ -1,13 +1,15 @@
 """
 Inventory Agent — tool/API-grounded, no LLM call.
 
-1. Looks up the PO by number; if inventory_added is already True for this
-   PO+SKU combination, skips the booking and returns an "already added" notice.
-2. Calculates undamaged units = ordered_qty - damaged_qty and writes them
-   into the vendor's ERP inventory via MCP.
-3. Marks the PO as inventory_added = True so the Delivered Orders page
-   reflects the change and duplicate runs are blocked.
-4. Classifies risk as safe / warning / critical.
+1. Looks up the PO; if inventory_added is already True, skips and returns early.
+2. Calculates undamaged units = ordered_qty - damaged_qty and books them into
+   the vendor's ERP inventory via MCP.
+3. Marks the PO as inventory_added = True.
+4. Reads daily_production_requirement from the ERP portal vendor_inventory record
+   (set by admin/warehouse — not the vendor). Calculates how many days of
+   factory production the post-shipment stock covers. If < 2 days, fires a
+   CRITICAL production-halt alert to the ERP admin and the vendor.
+5. Classifies risk as safe / warning / critical.
 """
 from __future__ import annotations
 
@@ -28,7 +30,7 @@ async def run_inventory(mcp_client: ErpMcpClient, case: dict) -> dict:
     item_name = case.get("item_name") or sku
     po_number = case.get("po_number") or case.get("order_number") or ""
 
-    # ── 1. Check if this PO has already had inventory booked ─────────────────
+    # ── 1. Duplicate-booking guard ────────────────────────────────────────────
     po = None
     po_lookup_error = None
     if po_number:
@@ -40,7 +42,6 @@ async def run_inventory(mcp_client: ErpMcpClient, case: dict) -> dict:
             logger.warning("PO lookup failed for %s: %s", po_number, exc)
 
     if po and po.get("inventory_added"):
-        # Already booked — return early with a clear notice
         try:
             vendor_items = await mcp_client.list_vendor_inventory(vendor_username)
             raw["vendor_inventory"] = vendor_items
@@ -63,19 +64,22 @@ async def run_inventory(mcp_client: ErpMcpClient, case: dict) -> dict:
             "error": None,
         }
 
-    # ── 2. Current vendor warehouse stock ─────────────────────────────────────
+    # ── 2. Fetch current ERP vendor inventory ─────────────────────────────────
     try:
         vendor_items = await mcp_client.list_vendor_inventory(vendor_username)
         raw["vendor_inventory"] = vendor_items
     except McpClientError as exc:
-        return {"result": None, "raw": raw, "status": "failed", "error": f"Vendor inventory lookup failed: {exc}"}
+        return {"result": None, "raw": raw, "status": "failed",
+                "error": f"Vendor inventory lookup failed: {exc}"}
 
     vendor_item = next((i for i in vendor_items if i.get("sku") == sku), None)
-    vendor_qty_on_hand = vendor_item.get("qty_on_hand", 0) if vendor_item else 0
+    vendor_qty_on_hand     = vendor_item.get("qty_on_hand", 0)         if vendor_item else 0
     vendor_reorder_threshold = vendor_item.get("reorder_threshold", 0) if vendor_item else 0
     vendor_below_threshold = vendor_qty_on_hand < vendor_reorder_threshold
+    # daily_production_requirement is set by ERP admin/warehouse on the inventory record
+    daily_production_req   = vendor_item.get("daily_production_requirement", 0) if vendor_item else 0
 
-    # ── 3. Book undamaged units into ERP vendor inventory ────────────────────
+    # ── 3. Book undamaged units into ERP inventory ────────────────────────────
     undamaged_qty = max(0, ordered_qty - damaged_qty)
     inventory_update_result = None
     inventory_update_error = None
@@ -96,36 +100,75 @@ async def run_inventory(mcp_client: ErpMcpClient, case: dict) -> dict:
             raw["inventory_update"] = {"error": inventory_update_error}
             logger.warning("Failed to book undamaged units: %s", exc)
 
-    # ── 4. Inventory alert ────────────────────────────────────────────────────
+    # ── 4. Resolve vendor company users (fan-out for alerts) ──────────────────
+    try:
+        vendor_users = await mcp_client.list_users_by_company(vendor_username)
+    except Exception as exc:
+        logger.warning("Could not resolve vendor company users: %s", exc)
+        vendor_users = [{"username": vendor_username}]
+
+    # ── 5. Standard inventory-update alert ───────────────────────────────────
     if inventory_update_result and undamaged_qty > 0:
-        alert_message = (
-            f"{undamaged_qty} unit(s) of '{item_name}' (SKU: {sku}) from PO {po_number or 'N/A'} "
-            f"have been added to the Inventory."
-        )
         alert_title = f"Inventory Updated — {item_name}"
+        alert_msg = (
+            f"{undamaged_qty} unit(s) of '{item_name}' (SKU: {sku}) from PO {po_number or 'N/A'} "
+            f"have been added to the ERP inventory."
+        )
         try:
             await mcp_client.create_alert(
                 audience="admin", target_username=None,
-                type="inventory_update", title=alert_title, message=alert_message,
+                type="inventory_update", title=alert_title, message=alert_msg,
             )
         except Exception as exc:
             logger.warning("Failed to send admin inventory alert: %s", exc)
-        # Fan-out to every user at the vendor company
         try:
-            vendor_users = await mcp_client.list_users_by_company(vendor_username)
+            await mcp_client.create_alert(
+                audience="vendor", target_username=vendor_username,
+                type="inventory_update", title=alert_title, message=alert_msg,
+            )
         except Exception as exc:
-            logger.warning("Could not resolve vendor company users for inventory alert: %s", exc)
-            vendor_users = [{"username": vendor_username}]
-        for vu in vendor_users:
+            logger.warning("Failed to send vendor inventory alert to %s: %s", vendor_username, exc)
+
+    # ── 6. Production halt risk check (ERP inventory daily requirement) ───────
+    # Post-shipment stock = what was already in ERP inventory + undamaged units arriving now.
+    qty_after_update = vendor_qty_on_hand + undamaged_qty
+    production_halt_risk = False
+    days_of_production_covered: float | None = None
+
+    if daily_production_req > 0:
+        days_of_production_covered = round(qty_after_update / daily_production_req, 1)
+        if days_of_production_covered < 2:
+            production_halt_risk = True
+            halt_title = f"CRITICAL: Production Halt Risk — {item_name}"
+            halt_msg = (
+                f"After processing damaged shipment (PO: {po_number or 'N/A'}), "
+                f"ERP inventory of '{item_name}' (SKU: {sku}) covers only "
+                f"{days_of_production_covered} day(s) of factory production "
+                f"(daily requirement: {daily_production_req} units/day, "
+                f"on-hand after booking: {qty_after_update} units). "
+                f"Immediate resupply from vendor '{vendor_username}' is required "
+                f"to prevent a manufacturing halt."
+            )
+            logger.warning(
+                "Production halt risk for %s/%s: %.1f days covered (threshold: 2 days)",
+                vendor_username, sku, days_of_production_covered,
+            )
             try:
                 await mcp_client.create_alert(
-                    audience="vendor", target_username=vu["username"],
-                    type="inventory_update", title=alert_title, message=alert_message,
+                    audience="admin", target_username=None,
+                    type="production_halt_risk", title=halt_title, message=halt_msg,
                 )
             except Exception as exc:
-                logger.warning("Failed to send vendor inventory alert to %s: %s", vu.get("username"), exc)
+                logger.warning("Failed to send admin production halt alert: %s", exc)
+            try:
+                await mcp_client.create_alert(
+                    audience="vendor", target_username=vendor_username,
+                    type="production_halt_risk", title=halt_title, message=halt_msg,
+                )
+            except Exception as exc:
+                logger.warning("Failed to send vendor halt alert to %s: %s", vendor_username, exc)
 
-    # ── 5. Mark PO as inventory_added ────────────────────────────────────────
+    # ── 7. Mark PO as inventory_added ────────────────────────────────────────
     if inventory_update_result and po_number:
         try:
             await mcp_client.mark_po_inventory_added(po_number)
@@ -133,11 +176,11 @@ async def run_inventory(mcp_client: ErpMcpClient, case: dict) -> dict:
         except McpClientError as exc:
             logger.warning("Failed to mark PO inventory_added: %s", exc)
 
-    # ── 6. Risk classification ────────────────────────────────────────────────
-    qty_after_update = vendor_qty_on_hand + undamaged_qty
-
+    # ── 8. Risk classification ────────────────────────────────────────────────
     if damaged_qty == 0:
         risk = "safe"
+    elif production_halt_risk:
+        risk = "critical"
     elif qty_after_update == 0 or vendor_below_threshold:
         risk = "critical"
     else:
@@ -150,10 +193,12 @@ async def run_inventory(mcp_client: ErpMcpClient, case: dict) -> dict:
         "damaged_qty": damaged_qty,
         "undamaged_qty": undamaged_qty,
         "vendor_qty_before": vendor_qty_on_hand,
-        "customer_qty_after_damage": qty_after_update,
-        "vendor_qty_on_hand": vendor_qty_on_hand,
+        "vendor_qty_after": qty_after_update,
         "vendor_reorder_threshold": vendor_reorder_threshold,
         "vendor_below_threshold": vendor_below_threshold,
+        "daily_production_requirement": daily_production_req,
+        "days_of_production_covered": days_of_production_covered,
+        "production_halt_risk": production_halt_risk,
         "inventory_booked": inventory_update_result is not None,
         "inventory_book_error": inventory_update_error,
         "po_number_checked": po_number or None,

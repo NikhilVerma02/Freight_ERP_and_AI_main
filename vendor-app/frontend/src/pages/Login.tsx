@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth, ApiError } from "../lib/auth";
 import ThemeToggle from "../components/ThemeToggle";
 
-type VendorRole = "vendor_order_manager" | "vendor_claim_handler" | "admin";
-const VENDOR_ROLES: VendorRole[] = ["vendor_order_manager", "vendor_claim_handler"];
+type VendorRole = "vendor" | "vendor_order_manager" | "vendor_claim_handler" | "admin";
+const VENDOR_ROLES: VendorRole[] = ["vendor", "vendor_order_manager", "vendor_claim_handler"];
 
 export default function Login() {
   const { login, logout } = useAuth();
@@ -64,8 +64,8 @@ export default function Login() {
 
           <div className="rounded-lg bg-slate-50 px-3 py-3 text-xs text-slate-500 ring-1 ring-slate-200 space-y-1 dark:bg-slate-800 dark:ring-slate-700 dark:text-slate-400">
             <p className="font-semibold text-slate-600 dark:text-slate-300">Demo credentials &mdash; password: <span className="font-mono text-emerald-600 dark:text-emerald-400">Admin@123</span></p>
-            <p><span className="font-mono text-slate-700 dark:text-slate-200">vendor_mgr</span> &nbsp;Vendor Order Manager</p>
-            <p><span className="font-mono text-slate-700 dark:text-slate-200">vendor_claims</span> &nbsp;Vendor Claim Handler</p>
+            <p><span className="font-mono text-slate-700 dark:text-slate-200">vertex_mgr</span> &nbsp;Order Manager</p>
+            <p><span className="font-mono text-slate-700 dark:text-slate-200">vertex_claims</span> &nbsp;Claims Handler</p>
           </div>
 
           <p className="text-sm text-slate-500 dark:text-slate-400">

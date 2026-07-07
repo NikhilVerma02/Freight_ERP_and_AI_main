@@ -25,7 +25,7 @@ def get_by_sku(vendor_username: str, sku: str) -> dict | None:
 
 
 def add_qty(vendor_username: str, sku: str, item_name: str, qty: int, actor: str = "system") -> dict:
-    """Increment (or create) the vendor's stock for a sku."""
+    """Increment (or create) the vendor's stock for a sku. Preserves daily_production_requirement."""
     existing = get_by_sku(vendor_username, sku)
     if existing:
         new_qty = existing.get("qty_on_hand", 0) + qty
@@ -40,6 +40,7 @@ def add_qty(vendor_username: str, sku: str, item_name: str, qty: int, actor: str
         "qty_on_hand": qty,
         "reorder_threshold": 0,
         "manufacturing_critical": False,
+        "daily_production_requirement": 0,
     })
     log_action(actor, "create", "vendor_inventory", record["id"],
                f"created {sku} qty={qty} for {vendor_username}")
@@ -57,7 +58,8 @@ def update_item(item_id: int, patch: dict, actor: str = "system") -> dict | None
     record = _col.update(item_id, patch)
     if record is None:
         return None
-    log_action(actor, "update", "vendor_inventory", item_id, f"updated item {record.get('sku')}: {patch}")
+    log_action(actor, "update", "vendor_inventory", item_id,
+               f"updated item {record.get('sku')}: {patch}")
     return record
 
 

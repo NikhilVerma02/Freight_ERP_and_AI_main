@@ -23,20 +23,29 @@ def list_claims_for(current_user: dict) -> list[dict]:
     if role == "customer":
         return [c for c in all_claims if c.get("customer_username") == username]
     if role == "vendor_order_manager":
-        return [c for c in all_claims if c.get("vendor_username") == username]
+        from app.services.users import get_user_by_username, list_users
+        user_rec = get_user_by_username(username, safe=False) or {}
+        company = user_rec.get("company_name") or ""
+        if company:
+            vendor_usernames = {
+                u["username"] for u in list_users(safe=False)
+                if u.get("company_name") == company
+                   and u.get("role") in ("vendor", "vendor_order_manager", "vendor_claim_handler")
+            }
+        else:
+            vendor_usernames = {username}
+        return [c for c in all_claims if c.get("vendor_username") in vendor_usernames]
     if role == "vendor_claim_handler":
         from app.services.users import get_user_by_username
         handler = get_user_by_username(username, safe=False) or {}
         handler_company = handler.get("company_name") or ""
         all_vendor_users = list_users(safe=False)
         if handler_company:
-            # Same company_name = same organisation; show claims for all order managers in the company
             vendor_usernames = {
                 u["username"] for u in all_vendor_users
-                if u.get("role") == "vendor_order_manager" and u.get("company_name") == handler_company
+                if u.get("role") in ("vendor", "vendor_order_manager", "vendor_claim_handler")
+                and u.get("company_name") == handler_company
             }
-            # Also include the handler's own username in case claims were filed directly against them
-            vendor_usernames.add(username)
         else:
             vendor_usernames = {
                 u["username"] for u in all_vendor_users
@@ -126,7 +135,8 @@ def create_claim(customer_username: str, order_id: int, sku: str, damage_type: s
 
 
 def create_claim_from_po(finance_officer_username: str, po: dict, sku: str, damage_type: str,
-                         damaged_qty: int, claim_text: str, actor: str) -> dict:
+                         damaged_qty: int, claim_text: str, actor: str,
+                         claim_value: float | None = None) -> dict:
     """Finance officer raises a claim against a delivered purchase order."""
     po_vendor = po.get("vendor_username", "")
     vendor_company = _company_name_for(po_vendor)
@@ -143,6 +153,7 @@ def create_claim_from_po(finance_officer_username: str, po: dict, sku: str, dama
         "damage_type": damage_type,
         "damaged_qty": damaged_qty,
         "claim_text": claim_text,
+        "claim_value": claim_value,
         "status": "pending",
         "decision_reason": None,
     })
@@ -160,7 +171,7 @@ def create_claim_from_po(finance_officer_username: str, po: dict, sku: str, dama
     return record
 
 
-def decide_claim(claim_id: int, vendor_username: str, status: str, decision_reason: str | None, actor: str) -> dict | None:
+def decide_claim(claim_id: int, vendor_username: str, status: str, decision_reason: str | None, actor: str, bypass_vendor_check: bool = False) -> dict | None:
     from app.services.users import list_users, get_user_by_username
     claim = get_claim(claim_id)
     if not claim:
@@ -173,16 +184,16 @@ def decide_claim(claim_id: int, vendor_username: str, status: str, decision_reas
     if actor_company:
         authorised_vendor_usernames = {
             u["username"] for u in all_vendor_users
-            if u.get("role") in ("vendor_order_manager", "vendor_claim_handler")
+            if u.get("role") in ("vendor", "vendor_order_manager", "vendor_claim_handler")
             and (u.get("company_name") or "") == actor_company
         }
         authorised_vendor_usernames.add(vendor_username)
     else:
         authorised_vendor_usernames = {
             u["username"] for u in all_vendor_users
-            if u.get("role") in ("vendor_order_manager", "vendor_claim_handler")
+            if u.get("role") in ("vendor", "vendor_order_manager", "vendor_claim_handler")
         }
-    if claim.get("vendor_username") not in authorised_vendor_usernames:
+    if not bypass_vendor_check and claim.get("vendor_username") not in authorised_vendor_usernames:
         raise ValueError("forbidden")
 
     record = _col.update(claim_id, {"status": status, "decision_reason": decision_reason})

@@ -49,11 +49,12 @@ export default function Claims() {
     user?.role === "inventory_controller" || user?.role === "finance_officer";
 
   const isFinanceOfficer = user?.role === "finance_officer";
+  const canFileClaim = isFinanceOfficer || user?.role === "admin" || user?.role === "warehouse";
 
   async function load() {
     setLoading(true);
     try {
-      if (isFinanceOfficer) {
+      if (canFileClaim) {
         const [c, pos] = await Promise.all([
           api.get<Claim[]>("/api/claims"),
           api.get<PurchaseOrder[]>("/api/purchase-orders"),
@@ -130,7 +131,7 @@ export default function Claims() {
               : "All claims across the platform."}
           </p>
         </div>
-        {(user?.role === "customer" || user?.role === "finance_officer") && (
+        {(user?.role === "customer" || canFileClaim) && (
           <Button onClick={() => setCreateOpen(true)}>+ New Claim</Button>
         )}
       </div>
@@ -220,13 +221,13 @@ export default function Claims() {
         </motion.div>
       )}
 
-      {(user?.role === "customer" || isFinanceOfficer) && (
+      {(user?.role === "customer" || canFileClaim) && (
         <NewClaimModal
           open={createOpen}
           onClose={() => setCreateOpen(false)}
           orders={deliveredOrders}
           purchaseOrders={purchaseOrders.filter((p) => p.status === "Delivered")}
-          isFinanceOfficer={isFinanceOfficer}
+          isFinanceOfficer={canFileClaim}
           onCreated={() => {
             setCreateOpen(false);
             load();
@@ -313,6 +314,7 @@ function NewClaimModal({
   const [damageType, setDamageType] = useState("");
   const [damagedQty, setDamagedQty] = useState(1);
   const [claimText, setClaimText] = useState("");
+  const [claimValue, setClaimValue] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
   const selectedOrder = orders.find((o) => o.id === orderId);
@@ -324,7 +326,7 @@ function NewClaimModal({
       if (!sku || !damageType || !claimText) { show("error", "Fill all fields"); return; }
       setSubmitting(true);
       try {
-        await api.post("/api/claims", { po_id: poId, sku, damage_type: damageType, damaged_qty: damagedQty, claim_text: claimText });
+        await api.post("/api/claims", { po_id: poId, sku, damage_type: damageType, damaged_qty: damagedQty, claim_text: claimText, claim_value: claimValue !== "" ? parseFloat(claimValue) : null });
         show("success", "Claim filed");
         reset(); onCreated();
       } catch (err) {
@@ -336,7 +338,7 @@ function NewClaimModal({
     if (!sku || !damageType || !claimText) { show("error", "Fill all fields"); return; }
     setSubmitting(true);
     try {
-      await api.post("/api/claims", { order_id: orderId, sku, damage_type: damageType, damaged_qty: damagedQty, claim_text: claimText });
+      await api.post("/api/claims", { order_id: orderId, sku, damage_type: damageType, damaged_qty: damagedQty, claim_text: claimText, claim_value: claimValue !== "" ? parseFloat(claimValue) : null });
       show("success", "Claim filed");
       reset(); onCreated();
     } catch (err) {
@@ -345,7 +347,7 @@ function NewClaimModal({
   }
 
   function reset() {
-    setOrderId(""); setPoId(""); setSku(""); setDamageType(""); setDamagedQty(1); setClaimText("");
+    setOrderId(""); setPoId(""); setSku(""); setDamageType(""); setDamagedQty(1); setClaimText(""); setClaimValue("");
   }
 
 
@@ -368,7 +370,7 @@ function NewClaimModal({
               <option value="">Select a PO…</option>
               {purchaseOrders.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.po_number} — {p.item_name} ({p.sku}) · {p.vendor_username}
+                  {p.po_number} — {p.item_name} ({p.sku}) · {(p as any).vendor_company_name || p.vendor_username}
                 </option>
               ))}
             </Select>
@@ -377,7 +379,7 @@ function NewClaimModal({
             )}
             {selectedPO && (
               <div className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                Vendor: <span className="font-semibold">{selectedPO.vendor_username}</span> · SKU: <span className="font-semibold">{selectedPO.sku}</span> · Qty: {selectedPO.quantity}
+                Vendor: <span className="font-semibold">{(selectedPO as any).vendor_company_name || selectedPO.vendor_username}</span> · SKU: <span className="font-semibold">{selectedPO.sku}</span> · Qty: {selectedPO.quantity}
               </div>
             )}
             <Input label="SKU" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="Auto-filled from PO" />
@@ -422,6 +424,15 @@ function NewClaimModal({
           min={1}
           value={damagedQty}
           onChange={(e) => setDamagedQty(parseInt(e.target.value || "0", 10))}
+        />
+        <Input
+          label="Claim value (₹)"
+          type="number"
+          min={0}
+          step={0.01}
+          value={claimValue}
+          onChange={(e) => setClaimValue(e.target.value)}
+          placeholder="e.g. 15000.00"
         />
         <TextArea label="Description" rows={3} value={claimText} onChange={(e) => setClaimText(e.target.value)} />
 

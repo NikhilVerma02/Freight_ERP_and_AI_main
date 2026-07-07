@@ -23,7 +23,6 @@ import VendorInventory from "./pages/VendorInventory";
 import CustomerInventory from "./pages/CustomerInventory";
 import SlaUpload from "./pages/SlaUpload";
 import SlaView from "./pages/SlaView";
-import MyCustomers from "./pages/MyCustomers";
 import MyVendors from "./pages/MyVendors";
 import RagEvaluation from "./pages/RagEvaluation";
 import Chatbot from "./pages/Chatbot";
@@ -176,7 +175,7 @@ export default function App() {
                     path="vendors"
                     element={
                       <RequireRole roles={["admin"]}>
-                        <Users filterRole="vendor_order_manager" title="Vendors" />
+                        <Users filterRole="vendor" title="Vendors" />
                       </RequireRole>
                     }
                   />
@@ -185,14 +184,6 @@ export default function App() {
                     element={
                       <RequireRole roles={["admin"]}>
                         <Users filterRole="customer" title="Customers" />
-                      </RequireRole>
-                    }
-                  />
-                  <Route
-                    path="my-customers"
-                    element={
-                      <RequireRole roles={["admin"]}>
-                        <MyCustomers />
                       </RequireRole>
                     }
                   />
